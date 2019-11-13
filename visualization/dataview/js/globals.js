@@ -1,0 +1,2 @@
+const width = ;
+const height = ;
