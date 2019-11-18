@@ -7,15 +7,20 @@ Created on Wed Nov 13 08:46:45 2019
 
 import json
 import pandas as pd
+pd.set_option('display.max_rows', 500)
+pd.set_option('display.max_columns', 200)
+pd.set_option('display.width', 2000)
+pd.set_option('display.float_format', '{:20,.2f}'.format)
+pd.set_option('display.max_colwidth', -1)
 import re
 import datetime
 
 from collections import OrderedDict
 
 data = []
-for year in range(2009, 2019):
+for year in range(2009, 2020):
     print(year)
-    with open("D:\\Dev\\perso\\trump_twitter\\data\\condensed_{}.json".format(year)) as json_file:
+    with open("D:\\Dev\\perso\\trump_twitter\\data\\condensed_{}.json".format(year) , encoding="utf8") as json_file:
         data.extend( json.load(json_file) )
 
 insults = OrderedDict()
@@ -51,6 +56,14 @@ for insult in insults.keys():
     df["insult_" + insult] = df.apply(lambda row: detect_insult(row, insult), axis=1)
     print(df["insult_" + insult].value_counts())
 
+def is_insult(row):
+    for insult in insults.keys():
+        if row["insult_" + insult]:
+            return True
+    return False
+    
+df["is_insult"] = df.apply(is_insult, axis=1)
+
 #creating dates_used
 dates = ["2010-01-01", "2019-01-01"]
 start, end = [datetime.datetime.strptime(_, "%Y-%m-%d") for _ in dates]
@@ -71,12 +84,14 @@ for insult in insults.keys():
         if data.shape[0] > 0:
             for index, row in data.iterrows():
                 if insult in count_insults:
-                    count_insults[insult] += 1
+                    count_insults[insult] += row["retweet_count"]
                 else:
-                    count_insults[insult] = 1
-                dict_data = dict({"name" : insult,
+                    count_insults[insult] = row["retweet_count"]
+                dict_data = dict({"name" :  insult.upper(),
                                   "value" : count_insults[insult],
-                                  "year" : date.year + date.month/12})
+                                  "year" : str(date.year),
+                                  "month" : str(date.month),
+                                  "date" : date.year + date.month/12})
                 data_final.append(dict_data)
         else:
             #no data
@@ -85,24 +100,26 @@ for insult in insults.keys():
             else:
                 count_insults[insult] = 0
                 
-            dict_data = dict({"name" : insult,
+            dict_data = dict({"name" : insult.upper(),
                               "value" : count_insults[insult],
-                              "year" : date.year + date.month/12})
+                              "year" : str(date.year),
+                              "month" : str(date.month),
+                              "date" : date.year + date.month/12})
             data_final.append(dict_data)
         
         
 data_final = pd.DataFrame(data_final)
 
 #keeping only the highest value by year
-data_final = data_final.drop_duplicates(subset=["name","year"], keep="last")    
+data_final = data_final.drop_duplicates(subset=["name","year", "month"], keep="last")    
 
 #find lastValue
 def find_lastValue(row):
     try:
-        return data_final[(data_final["name"] == row["name"]) & (data_final["year"] < row["year"])].sort_values("value", ascending=False)["value"].iloc[0]
+        return data_final[(data_final["name"] == row["name"]) & (data_final["date"] < row["date"])].sort_values("date", ascending=False)["value"].iloc[0]
     except IndexError:
         #return current value (starting one)
-        return data_final[(data_final["name"] == row["name"]) & (data_final["year"] <= row["year"])].sort_values("value", ascending=False)["value"].iloc[0]    
+        return data_final[(data_final["name"] == row["name"]) & (data_final["date"] <= row["date"])].sort_values("date", ascending=False)["value"].iloc[0]    
 
 data_final["lastValue"] = data_final.apply(find_lastValue,axis=1)
 
@@ -116,11 +133,14 @@ data_final["rank"] = data_final.apply(find_rank,axis=1)
 data_final.to_csv("D:\\Dev\\perso\\trump_twitter\\data\\data_final\\data_insults.csv", sep=",", index=False)
 
 
+#find most populars tweet by year and by insult
+df[df["is_insult"]].sort_values("retweet_count", ascending=False)[["text", "retweet_count" ,"date"]].iloc[0]
 
 
 
-
-
+#joining the most upvoted tweet 
+#capitalize insults
+#Get 2019 data
 
 
 
@@ -148,3 +168,5 @@ df_words = df_words.reset_index()\
   .melt('index',value_name='count')\
   .drop('variable', axis=1)\
   .sort_values('count', ascending=False)
+  
+  

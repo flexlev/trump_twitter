@@ -10,6 +10,7 @@
 
 <body>
 	<div id="chart"></div>
-	<script src="js/d3-3-5-5.js"></script>
+	<script src="https://d3js.org/d3.v5.min.js"></script>
+	<script src="js/globals.js"></script>
 	<script src="js/main.js"></script>
 </body></html>
